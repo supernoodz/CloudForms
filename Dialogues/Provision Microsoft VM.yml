@@ -1,0 +1,339 @@
+---
+- description: Provision Microsoft VM
+  buttons: submit,cancel
+  label: Provision Microsoft VM_statemachine
+  dialog_tabs:
+  - description: Request
+    display: edit
+    label: Request
+    display_method: 
+    display_method_options: 
+    position: 0
+    dialog_groups:
+    - description: Request Info
+      display: edit
+      label: Request Info
+      display_method: 
+      display_method_options: 
+      position: 0
+      dialog_fields:
+      - name: option_0_owner_email
+        description: E-mail
+        type: DialogFieldTextBox
+        data_type: 
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values: 
+        values_method: 
+        values_method_options: {}
+        options:
+          :protected: false
+        label: E-mail
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+  - description: Catalogue
+    display: edit
+    label: Catalogue
+    display_method: 
+    display_method_options: 
+    position: 1
+    dialog_groups:
+    - description: Select Source
+      display: edit
+      label: Select Source
+      display_method: 
+      display_method_options: 
+      position: 0
+      dialog_fields:
+      - name: option_0_src_vm_name
+        description: Templates
+        type: DialogFieldDynamicList
+        data_type: 
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: false
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values: 
+        values_method: 
+        values_method_options: {}
+        options:
+          :load_values_on_init: false
+          :show_refresh_button: false
+        label: Templates
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+    - description: Naming
+      display: edit
+      label: Naming
+      display_method: 
+      display_method_options: 
+      position: 1
+      dialog_fields:
+      - name: option_0_vm_host_name
+        description: VM Name
+        type: DialogFieldTextBox
+        data_type: 
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: ''
+        values: 
+        values_method: 
+        values_method_options: {}
+        options:
+          :protected: false
+        label: VM Name
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+  - description: Purpose
+    display: edit
+    label: Purpose
+    display_method: 
+    display_method_options: 
+    position: 2
+    dialog_groups:
+    - description: Select Tags to apply
+      display: edit
+      label: Select Tags to apply
+      display_method: 
+      display_method_options: 
+      position: 0
+      dialog_fields:
+      - name: tags
+        description: Tags
+        type: DialogFieldTagControl
+        data_type: string
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: false
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values: 
+        values_method: 
+        values_method_options: {}
+        options:
+          :category_id: ''
+          :force_single_value: false
+          :sort_by: :description
+          :sort_order: :ascending
+        label: Tags
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+  - description: Environment
+    display: edit
+    label: Environment
+    display_method: 
+    display_method_options: 
+    position: 3
+    dialog_groups:
+    - description: Host
+      display: edit
+      label: Host
+      display_method: 
+      display_method_options: 
+      position: 0
+      dialog_fields:
+      - name: option_0_placement_host_name
+        description: Name
+        type: DialogFieldDynamicList
+        data_type: 
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: false
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values: 
+        values_method: 
+        values_method_options: {}
+        options:
+          :load_values_on_init: false
+          :show_refresh_button: false
+        label: Name
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+    - description: Storage
+      display: edit
+      label: Storage
+      display_method: 
+      display_method_options: 
+      position: 1
+      dialog_fields:
+      - name: option_0_placement_ds_name
+        description: Path
+        type: DialogFieldDropDownList
+        data_type: string
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values:
+        - - E:\Hyper-V
+          - shared_iSCSI
+        - - C:\ProgramData\Microsoft\Windows\Hyper-V
+          - local
+        values_method: 
+        values_method_options: {}
+        options:
+          :sort_by: :description
+          :sort_order: :ascending
+        label: Path
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+  - description: Hardwar
+    display: edit
+    label: Hardware
+    display_method: 
+    display_method_options: 
+    position: 4
+    dialog_groups:
+    - description: Hardware
+      display: edit
+      label: Hardware
+      display_method: 
+      display_method_options: 
+      position: 0
+      dialog_fields:
+      - name: option_0_number_of_sockets
+        description: CPU\Sockets
+        type: DialogFieldDropDownList
+        data_type: string
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: '1'
+        values:
+        - - '1'
+          - '1'
+        - - '2'
+          - '2'
+        - - '4'
+          - '4'
+        values_method: 
+        values_method_options: {}
+        options:
+          :sort_by: :value
+          :sort_order: :ascending
+        label: CPU\Sockets
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+      - name: option_0_vm_memory
+        description: Memory (MB)
+        type: DialogFieldDropDownList
+        data_type: integer
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: '1024'
+        values:
+        - - '1024'
+          - '1024'
+        - - '2048'
+          - '2048'
+        - - '4096'
+          - '4096'
+        values_method: 
+        values_method_options: {}
+        options:
+          :sort_by: :value
+          :sort_order: :ascending
+        label: Memory (MB)
+        position: 1
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+  - description: Network
+    display: edit
+    label: Network
+    display_method: 
+    display_method_options: 
+    position: 5
+    dialog_groups:
+    - description: Network Adapter Information
+      display: edit
+      label: Network Adapter Information
+      display_method: 
+      display_method_options: 
+      position: 0
+      dialog_fields:
+      - name: option_0_vlan
+        description: vLAN
+        type: DialogFieldDropDownList
+        data_type: string
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values:
+        - - New Virtual Switch
+          - New Virtual Switch
+        - - iSCSI Virtual Switch
+          - iSCSI Virtual Switch
+        values_method: 
+        values_method_options: {}
+        options:
+          :sort_by: :description
+          :sort_order: :ascending
+        label: vLAN
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
