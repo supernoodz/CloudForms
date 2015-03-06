@@ -1,0 +1,20 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: Provision VM from Template
+    name: microsoft_template
+    inherits: 
+    description: 
+  fields:
+  - Provision:
+      value: /Infrastructure/VM/Provisioning/StateMachines/Methods/microsoft_Provision
+  - CheckProvisioned:
+      value: /Infrastructure/VM/Provisioning/StateMachines/Methods/microsoft_CheckProvisioned
+  - PostProvision:
+      value: /Infrastructure/VM/Provisioning/StateMachines/Methods/microsoft_PostProvision
+  - EmailOwner:
+      value: /Infrastructure/VM/Provisioning/Email/service_template_provision_task_Complete
+  - Finished:
+      value: ! '#'
