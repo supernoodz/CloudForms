@@ -1,3 +1,3 @@
 # CloudForms
 
-CloudForms methods, dialogues and other stuff.
+ManageIQ/CloudForms methods, dialogues and other stuff.
