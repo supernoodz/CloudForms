@@ -1,3 +1,3 @@
 # CloudForms
 
-CloudForms methods and dialogues.
+CloudForms methods, dialogues and other stuff.
