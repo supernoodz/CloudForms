@@ -1,0 +1,16 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: 
+    name: getHosts
+    inherits: 
+    description: 
+  fields:
+  - method:
+      value: getHosts
+  - method2:
+      value: ! '#getHostDetails'
+  - method3:
+      value: ! '#listInstances'

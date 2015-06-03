@@ -1,0 +1,21 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: 
+    name: CreateTenantAndUser
+    inherits: 
+    description: 
+  fields:
+  - state1:
+      value: /Integration/OpenStack/Keystone/CreateTenant
+      on_error: requestFailed
+  - state2:
+      value: /Integration/OpenStack/Keystone/CreateUser
+      on_error: requestFailed
+  - state3:
+      value: /Integration/OpenStack/Keystone/setTenantQuota
+      on_error: requestFailed
+  - state4:
+      value: /Integration/OpenStack/Email/TenantReady

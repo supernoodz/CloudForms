@@ -1,0 +1,14 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: 
+    name: ems_openstack
+    inherits: 
+    description: 
+  fields:
+  - vmdb_object:
+      value: ems_openstack
+  - method:
+      value: populate_dynamic_dropdown
