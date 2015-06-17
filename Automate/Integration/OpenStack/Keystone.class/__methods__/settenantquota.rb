@@ -19,6 +19,8 @@ tenant_id = $evm.get_state_var('tenant_id')
 
 # Compute Quota
 
+log(:info, "Setting Compute Quota")
+
 conn = Fog::Compute.new({
   :provider => 'OpenStack',
   :openstack_api_key => openstack.authentication_password,
@@ -52,13 +54,16 @@ options = {
  :ram => $evm.root['dialog_ram'],
  :instances => $evm.root['dialog_instances'],
  :cores => $evm.root['dialog_cores'],
- :fixed_ips => $evm.root['dialog_fixed_ips']
+ :floating_ips => $evm.root['dialog_floating_ips']
 }
 
+log(:info, conn.get_quota(tenant_id).inspect)
 conn.update_quota(tenant_id, options)
-puts conn.get_quota(tenant_id).inspect
+log(:info, conn.get_quota(tenant_id).inspect)
 
 # Storage Quota
+
+log(:info, "Setting Storage Quota")
 
 conn = Fog::Volume.new({
   :provider => 'OpenStack',
@@ -84,7 +89,8 @@ options = {
   :gigabytes => $evm.root['dialog_volume_gb']
 }
 
+log(:info, conn.get_quota(tenant_id).inspect)
 conn.update_quota(tenant_id, options)
-puts conn.get_quota(tenant_id).inspect
+log(:info, conn.get_quota(tenant_id).inspect)
 
 log(:info, "End Automate Method")
