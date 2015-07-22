@@ -14,8 +14,38 @@ raise 'OpenStack provider lookup failed' if openstack.nil?
 
 log(:info, "Connecting to OpenStack EMS #{openstack[:hostname]}")
 
-# tenant_id = '1bdac2b495c5411b8d36967214d0ef73'
 tenant_id = $evm.get_state_var('tenant_id')
+
+# Network Quota
+
+log(:info, "Setting Network Quota")
+
+conn = Fog::Network.new({
+  :provider => 'OpenStack',
+  :openstack_api_key => openstack.authentication_password,
+  :openstack_username => openstack.authentication_userid,
+  :openstack_auth_url => "http://#{openstack[:hostname]}:#{openstack[:port]}/v2.0/tokens",
+  :openstack_tenant => "admin"
+})
+
+# Network quota_set
+# "quota" => {
+#   "subnet" => 10,
+#   "network" => 10,
+#   "floatingip" => 50,
+#   "security_group_rule" => 100,
+#   "security_group" => 10,
+#   "router" => 10,
+#   "port" => 50
+# }
+
+options = {
+ :floatingip => $evm.root['dialog_floating_ips']
+}
+
+log(:info, conn.get_quota(tenant_id).inspect)
+conn.update_quota(tenant_id, options)
+log(:info, conn.get_quota(tenant_id).inspect)
 
 # Compute Quota
 
@@ -28,8 +58,6 @@ conn = Fog::Compute.new({
   :openstack_auth_url => "http://#{openstack[:hostname]}:#{openstack[:port]}/v2.0/tokens",
   :openstack_tenant => "admin"
 })
-
-# puts conn.get_quota(tenant_id).inspect
 
 # Compute quota_set
 # "quota_set" => {
@@ -54,7 +82,7 @@ options = {
  :ram => $evm.root['dialog_ram'],
  :instances => $evm.root['dialog_instances'],
  :cores => $evm.root['dialog_cores'],
- :floating_ips => $evm.root['dialog_floating_ips']
+ # :floating_ips => $evm.root['dialog_floating_ips']
 }
 
 log(:info, conn.get_quota(tenant_id).inspect)
@@ -72,8 +100,6 @@ conn = Fog::Volume.new({
   :openstack_auth_url => "http://#{openstack[:hostname]}:#{openstack[:port]}/v2.0/tokens",
   :openstack_tenant => "admin"
 })
-
-# puts conn.get_quota(tenant_id).inspect
 
 # Volume quota_set
 # "quota_set" => {
