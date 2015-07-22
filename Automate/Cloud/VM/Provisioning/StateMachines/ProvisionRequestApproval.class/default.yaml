@@ -1,0 +1,14 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: 
+    name: Default
+    inherits: 
+    description: 
+  fields:
+  - approve_flavour:
+      value: m1_large,m1_xlarge
+  - max_vms:
+      value: '1'

@@ -1,0 +1,12 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: Default
+    name: Default
+    inherits: 
+    description: 
+  fields:
+  - approve_flavour:
+      value: m1_tiny,m1_large
