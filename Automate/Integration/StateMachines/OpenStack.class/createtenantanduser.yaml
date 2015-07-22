@@ -9,13 +9,22 @@ object:
     description: 
   fields:
   - state1:
-      value: /Integration/OpenStack/Keystone/CreateTenant
-      on_error: requestFailed
+      value: "/Integration/OpenStack/Keystone/CreateTenant"
+      on_entry: update_serviceprovision_status(status => 'Creating Tenant')
+      on_exit: update_serviceprovision_status(status => 'Tenant created')
+      on_error: requestFailed(status => 'Failed to create Tenant')
   - state2:
-      value: /Integration/OpenStack/Keystone/CreateUser
-      on_error: requestFailed
+      value: "/Integration/OpenStack/Keystone/CreateUser"
+      on_entry: update_serviceprovision_status(status => 'Creating User')
+      on_exit: update_serviceprovision_status(status => 'Tenant User created')
+      on_error: requestFailed(status => 'Failed to create Tenant User')
   - state3:
-      value: /Integration/OpenStack/Keystone/setTenantQuota
-      on_error: requestFailed
+      value: "/Integration/OpenStack/Keystone/setTenantQuota"
+      on_entry: update_serviceprovision_status(status => 'Setting Tenant Quota')
+      on_exit: update_serviceprovision_status(status => 'Tenant Quota set')
+      on_error: requestFailed(status => 'Failed to set Tenant Quota')
   - state4:
-      value: /Integration/OpenStack/Email/TenantReady
+      value: "/Integration/OpenStack/Email/TenantReady"
+      on_entry: update_serviceprovision_status(status => 'Sending completion email')
+      on_exit: update_serviceprovision_status(status => 'Completion email sent')
+      on_error: requestFailed(status => 'Failed to send completion email')

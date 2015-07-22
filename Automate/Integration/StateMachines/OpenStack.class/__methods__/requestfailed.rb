@@ -11,6 +11,16 @@
 # 3. signature - used to stamp the email with a custom signature
 #
 
+prov = $evm.root['service_template_provision_task']
+
+# Get status from input field status
+status = $evm.inputs['status']
+
+# Update Status for on_entry,on_exit
+if $evm.root['ae_result'] == 'ok' || $evm.root['ae_result'] == 'error'
+  prov.message = status
+end
+
 # service_template_provision_task = $evm.root['service_template_provision_task']
 # miq_request = service_template_provision_task.miq_request
 # requester = miq_request.requester
