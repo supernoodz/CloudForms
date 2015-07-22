@@ -140,6 +140,31 @@ def max_memory_check(options_hash, reason_hash)
   end
 end
 
+# # set thresholds based on dialog_option_?_flavor
+# def max_flavor_check(options_hash, reason_hash)
+#   reject = false
+#   # flavor_weight = {'xsmall' => 1, 'small' => 2, 'medium' => 3, 'large' => 4, 'xlarge' => 5, 'xxlarge' => 6}
+#   options_hash.each do |sequence_id, options|
+#     next if options[:flavor].blank? || reject
+#     log(:info, "sequence_id: #{sequence_id} options[:flavor]: #{options[:flavor] rescue nil}")
+#     case options[:flavor]
+#     when 'xsmall'
+#       #reject = true
+#     when 'small'
+#       #reject = true
+#     when 'medium'
+#       #reject = true
+#     when 'large'
+#       #reject = true
+#     when 'xlarge'
+#       #reject = true
+#     when 'xxlarge'
+#       #reject = true
+#     end
+#     reason_hash[:reason3] = "Requested flavor #{options[:flavor]} requires manual approval" if reject
+#   end
+# end
+
 def max_flavor_check(reason_hash)
 
   model_approve_flavour = nil || $evm.object['approve_flavour'].to_a
@@ -190,6 +215,7 @@ reason_hash = {}
 
 max_cpu_check(options_hash, reason_hash)
 max_memory_check(options_hash, reason_hash)
+# max_flavor_check(options_hash, reason_hash)
 max_flavor_check(reason_hash)
 
 # if approval required then send request into a pending state
