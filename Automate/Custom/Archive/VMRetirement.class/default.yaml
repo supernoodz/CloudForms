@@ -1,0 +1,20 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: Default
+    name: Default
+    inherits: 
+    description: 
+  fields:
+  - UnregisterFromVC:
+      value: "/ZCustom/Archive/Methods/retire_via_soap"
+  - CheckAutomationTask:
+      value: "/ZCustom/Archive/Methods/check_automation_task"
+  - DeleteFromVC:
+      value: "#/ZCustom/Archive/Methods/DeleteFromVC"
+  - CheckUnregisteredFromVC:
+      value: "#/ZCustom/Archive/Methods/CheckUnregisteredFromVC"
+  - DeleteFromVMDB:
+      value: "#/ZCustom/Archive/Methods/DeleteFromVMDB"
