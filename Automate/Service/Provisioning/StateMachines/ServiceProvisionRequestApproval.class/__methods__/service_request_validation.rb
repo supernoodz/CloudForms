@@ -6,7 +6,7 @@
 # Description: This method validates the service provision request using the values [max_vms, max_cpus, max_memory] from values in the model
 #
 
-# 21-07-15 - Added approval support for Cloud (flavour) during provisioning.
+# 21-07-15 - Added approval support for Cloud (flavor) during provisioning.
 
 def log(level, msg, update_message=false)
   $evm.log(level, "#{msg}")
@@ -29,7 +29,7 @@ def get_options_hash(dialog_options)
     next if v.blank?
     if options_regex =~ k
       sequence_id = $1.to_i
-      option_key = $2.downcase.to_sym
+      option_key = $2.to_s.downcase.to_sym
       log(:info, "Adding via regex sequence_id: #{sequence_id} option_key: #{option_key.inspect} option_value: #{v.inspect} to options_hash")
       if options_hash.has_key?(sequence_id)
         options_hash[sequence_id][option_key] = v
@@ -68,6 +68,7 @@ def query_prov_options(parent_service_template, prov_option)
       options_array << child_service_resource.resource.get_option(prov_option)
     end
   end # parent_service_template_service_resources.each
+  log(:info, "Inspecting options_array: #{options_array.inspect}")
   return options_array
 end
 
@@ -165,28 +166,93 @@ end
 #   end
 # end
 
-def max_flavor_check(reason_hash)
+def max_flavor_check(options_hash, reason_hash)
+  
+  model_approve_flavor = nil || $evm.object['approve_flavor'].to_a
 
-  model_approve_flavour = nil || $evm.object['approve_flavour'].to_a
-  # Validate model_max_memory if not 0
-  unless model_approve_flavour.nil?
-    log(:info,"Auto-Approval Threshold(Model): model_approve_flavour=#{model_approve_flavour} detected")
+  # Add support for template tagging, which overrides model
+  template_approve_flavor = nil
 
-    # Add support for tagging template?
+  # template_instance_types = query_prov_options(@service_template, :instance_type)
+  # log(:info, "template_instance_types: #{template_instance_types}")
 
-    template_instance_types = query_prov_options(@service_template, :instance_type)
-    log(:info, "template_instance_types: #{template_instance_types}")
+  # template_instance_types.each { | template_instance_type |
+  #   flavor = $evm.vmdb(:flavor).find_by_id(template_instance_type)
 
-    template_instance_types.each { | template_instance_type |
-      flavour = $evm.vmdb(:flavor).find_by_id(template_instance_type)
+  #   unless flavor.nil?
+  #     $evm.log("info", "#{flavor.id} => #{flavor.name}")
+  #     if model_approve_flavor.include?(flavor.name.gsub('.','_')) # Since we're using tags, we need to use underscores
+  #       $evm.log("info", "*** Matched, approval required ***")
+  #       $evm.log("info", "Auto-Approval Threshold(Warning): Requested flavor <#{flavor.name}> requires approval")
+  #       reason_hash[:reason3] = "Requested flavor <#{flavor.name}> requires approval"
+  #     else
+  #       $evm.log("info", "*** Not matched, approval not required ***")
+  #     end
+  #   end
+  # }
 
-      unless flavour.nil?
-        if model_approve_flavour.include?(flavour.name.gsub('.','_')) # Since we're using tags, we need to use underscores
-          $evm.log("info", "Auto-Approval Threshold(Warning): Requested flavour <#{flavour.name}> requires approval")
-          reason_hash[:reason3] = "Requested flavour <#{flavour.name}> requires approval"
+  # Template tagging overrides model
+  if template_approve_flavor
+    log(:info,"Auto-Approval Threshold(Template): template_approve_flavor=#{template_approve_flavor} detected")
+    approve_flavor = template_approve_flavor
+  elsif model_approve_flavor
+    log(:info,"Auto-Approval Threshold(Model): model_approve_flavor=#{model_approve_flavor} detected")
+    approve_flavor = model_approve_flavor
+  end
+
+  unless approve_flavor.nil?
+
+    #####################################################################
+    # Check options_hash (dialogue) for requested flavours
+    #####################################################################
+    options_hash.each do |sequence_id, options|
+      log(:info, "sequence_id: #{sequence_id} options: #{options.inspect}")
+
+      # Try lookup with :instance_type
+      flavor = $evm.vmdb(:flavor).find_by_id(options[:instance_type])
+
+      # Failing that, try the flavour name passed as :flavor (with underscore)
+      if flavor.nil?
+        flavor = $evm.vmdb(:flavor).find_by_name(options[:flavor].to_s.gsub('_','.'))
+      end
+
+      unless flavor.nil?
+        if approve_flavor.include?(flavor.name.gsub('.','_')) # Since we're using tags, we need to use underscores
+          $evm.log("info", "*** Matched, approval required ***")
+          $evm.log("info", "Auto-Approval Threshold(Warning): Requested flavor <#{flavor.name}> requires approval")
+          reason_hash[:reason3] = "Requested flavor <#{flavor.name}> requires approval"
+          break
+        else
+          $evm.log("info", "*** Not matched, approval not required ***")
         end
       end
-    }
+    end
+
+    #####################################################################
+    # Check service template object(s) for requested flavours
+    #####################################################################
+
+    if reason_hash.nil?
+      template_instance_types = query_prov_options(@service_template, :instance_type)
+      log(:info, "template_instance_types: #{template_instance_types}")
+
+      template_instance_types.each { | template_instance_type |
+        flavor = $evm.vmdb(:flavor).find_by_id(template_instance_type)
+
+        unless flavor.nil?
+          $evm.log("info", "#{flavor.id} => #{flavor.name}")
+          if model_approve_flavor.include?(flavor.name.gsub('.','_')) # Since we're using tags, we need to use underscores
+            $evm.log("info", "*** Matched, approval required ***")
+            $evm.log("info", "Auto-Approval Threshold(Warning): Requested flavor <#{flavor.name}> requires approval")
+            reason_hash[:reason3] = "Requested flavor <#{flavor.name}> requires approval"
+            break
+          else
+            $evm.log("info", "*** Not matched, approval not required ***")
+          end
+        end
+      }
+    end
+
   end
 
   reason_hash unless reason_hash.nil?
@@ -202,7 +268,12 @@ dump_root()
 @miq_request = $evm.root['miq_request']
 log(:info, "miq_request.id: #{@miq_request.id} miq_request.options[:dialog]: #{@miq_request.options[:dialog].inspect}")
 
-# Get dialog options from miq_request
+#####################################################################
+# Flavour support, dialogue must include option_N_flavor
+# Otherwise, flavour of the selected template used.
+#####################################################################
+
+# Get dialog options from miq_request (to check for overriding requests)
 dialog_options = @miq_request.options[:dialog]
 log(:info, "Inspecting Dialog Options: #{dialog_options.inspect}")
 options_hash = get_options_hash(dialog_options)
@@ -215,8 +286,7 @@ reason_hash = {}
 
 max_cpu_check(options_hash, reason_hash)
 max_memory_check(options_hash, reason_hash)
-# max_flavor_check(options_hash, reason_hash)
-max_flavor_check(reason_hash)
+max_flavor_check(options_hash, reason_hash)
 
 # if approval required then send request into a pending state
 log(:info, "reason_hash: #{reason_hash.inspect}")

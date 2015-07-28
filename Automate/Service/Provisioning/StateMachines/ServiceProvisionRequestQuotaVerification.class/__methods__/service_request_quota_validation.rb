@@ -9,6 +9,9 @@
 # 3. Owner model - This looks at the Instance for the following attributes: [max_owner_cpu, warn_owner_cpu, max_owner_memory, warn_owner_memory, max_owner_storage, warn_owner_storage, max_owner_vms, warn_owner_vms]
 # 4. User tags - This looks at the User for the following tag values: [quota_max_cpu, quota_warn_cpu, quota_max_memory, quota_warn_memory, quota_max_storage, quota_warn_storage, quota_max_vms, quota_warn_vms]
 #
+
+# 28-07-15 - Approval support for Cloud (flavour) during provisioning amended.
+
 begin
   def log(level, msg, update_message=false)
     $evm.log(level, "#{msg}")
@@ -31,7 +34,7 @@ begin
     dialog_options.each do |k,v|
       if options_regex =~ k
         sequence_id = $1.to_i
-        option_key = $2.downcase.to_sym
+        option_key = $2.to_s.downcase.to_sym
         unless v.blank?
           log(:info, "Adding via regex sequence_id: #{sequence_id} option_key: #{option_key.inspect} option_value: #{v.inspect} to options_hash")
           if options_hash.has_key?(sequence_id)
@@ -133,14 +136,31 @@ begin
   end
 
   def get_total_requested(options_hash, prov_option)
+
+    #####################################################################
+    # Check service template object(s) for requested flavours
+    #####################################################################
     template_array = query_prov_options(prov_option)
     unless template_array.blank?
       template_totals = template_array.collect(&:to_i).inject(&:+)
       log(:info, "template_totals(#{prov_option.to_sym}): #{template_totals.inspect}")
     end
+
+    #####################################################################
+    # Check options_hash (dialogue) for overriding requested flavours
+    #####################################################################
     dialog_array = []
     options_hash.each do |sequence_id, options|
+      log(:info, "options: #{options.inspect}")
+
+      # Try lookup with :instance_type
       flavor = $evm.vmdb(:flavor).find_by_id(options[:instance_type])
+
+      # Failing that, try the flavour name passed as :flavor (with underscore)
+      if flavor.nil?
+        flavor = $evm.vmdb(:flavor).find_by_name(options[:flavor].to_s.gsub('_','.'))
+      end
+
       if flavor
         if prov_option == :cores_per_socket
           dialog_array << flavor.cpus
@@ -150,6 +170,7 @@ begin
           dialog_array << options[prov_option] unless options[prov_option].blank?
         end
       else
+        log(:info, "flavour empty")
         dialog_array << options[prov_option] unless options[prov_option].blank?
       end
     end
@@ -157,7 +178,12 @@ begin
       dialog_totals = dialog_array.collect(&:to_i).inject(&:+)
       log(:info, "dialog_totals(#{prov_option.to_sym}): #{dialog_totals.inspect}") unless dialog_totals.zero?
     end
-    if template_totals.to_i < dialog_totals.to_i
+    # if template_totals.to_i < dialog_totals.to_i
+    #   total_requested = dialog_totals.to_i
+    # else
+    #   total_requested = template_totals.to_i
+    # end
+    if dialog_totals
       total_requested = dialog_totals.to_i
     else
       total_requested = template_totals.to_i
@@ -372,7 +398,13 @@ begin
   @miq_request = $evm.root['miq_request']
   log(:info, "Request id: #{@miq_request.id} options: #{@miq_request.options.inspect}")
 
-  # Get dialog options from miq_request
+
+  #####################################################################
+  # Flavour support, dialogue must include option_N_flavor
+  # Otherwise, flavour of the selected template used.
+  #####################################################################
+
+  # Get dialog options from miq_request (to check for overriding requests)
   dialog_options = @miq_request.options[:dialog]
   log(:info, "Inspecting Dialog Options: #{dialog_options.inspect}")
   options_hash = get_options_hash(dialog_options)
