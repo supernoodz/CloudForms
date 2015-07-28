@@ -179,36 +179,36 @@ end
 
 ###################################
 #
-# approve_flavour:
+# approve_flavor:
 # Validate requested flavour
 #
 ###################################
-# Set approve_flavour here to override the model
-approve_flavour = nil
+# Set approve_flavor here to override the model
+approve_flavor = nil
 
 # Use value from model unless specified above
-approve_flavour ||= $evm.object['approve_flavour']
-unless approve_flavour.nil?
-  $evm.log("info", "Auto-Approval Threshold(Model):<approve_flavour=#{approve_flavour}> detected")
+approve_flavor ||= $evm.object['approve_flavor']
+unless approve_flavor.nil?
+  $evm.log("info", "Auto-Approval Threshold(Model):<approve_flavor=#{approve_flavor}> detected")
 end
 
 # Get Template Tag
-prov_approve_flavour = template.tags(:prov_approve_flavour)
+prov_approve_flavor = template.tags(:prov_approve_flavor)
 # If template is tagged then override
-unless prov_approve_flavour.blank?
-  $evm.log("info", "Auto-Approval Threshold(Tag):<prov_approve_flavour=#{prov_approve_flavour}> from template:<#{template.name}> detected")
-  approve_flavour = prov_approve_flavour
+unless prov_approve_flavor.blank?
+  $evm.log("info", "Auto-Approval Threshold(Tag):<prov_approve_flavor=#{prov_approve_flavor}> from template:<#{template.name}> detected")
+  approve_flavor = prov_approve_flavor
 end
 
-# Validate approve_flavour if not nil or empty
-unless approve_flavour.blank?
-  flavour = $evm.vmdb(:flavor).find_by_id(prov_resource.get_option(:instance_type))
+# Validate approve_flavor if not nil or empty
+unless approve_flavor.blank?
+  flavor = $evm.vmdb(:flavor).find_by_id(prov_resource.get_option(:instance_type))
 
-  unless flavour.nil?
-    if approve_flavour.include?(flavour.name.gsub('.','_')) # Since we're using tags, we need to use underscores
-      $evm.log("info", "Auto-Approval Threshold(Warning): Requested flavour <#{flavour.name}> requires approval")
+  unless flavor.nil?
+    if approve_flavor.include?(flavor.name.gsub('.','_')) # Since we're using tags, we need to use underscores
+      $evm.log("info", "Auto-Approval Threshold(Warning): Requested flavor <#{flavor.name}> requires approval")
       approval_req = true
-      reason5 = "Requested flavour <#{flavour.name}> requires approval"
+      reason5 = "Requested flavor <#{flavor.name}> requires approval"
     end
   end
 end
