@@ -13,7 +13,7 @@ object:
   schema:
   - field:
       aetype: attribute
-      name: approve_flavour
+      name: approve_flavor
       display_name: 
       datatype: array
       priority: 1
