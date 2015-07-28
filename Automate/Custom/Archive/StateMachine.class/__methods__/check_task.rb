@@ -254,64 +254,97 @@ begin
     raise 'One or more required vm.ext_management_system attributes missing'
   end
 
-  # Locate Windows proxy
-  proxies = $evm.execute('active_miq_proxies')
-  proxy = proxies.detect { |p| p.host.platform == 'windows'}
-  raise 'Fatal error, could not find an active Windows SmartProxy' if proxy.nil?
-  log(:info, "Windows SmartProxy: #{proxy.name}")
+  # WinRM host
+  winrm_host      = ''
+  winrm_user      = ''
+  winrm_password  = ''
 
-  log(:info, 'Checking storage vMotion task state')
+  port ||= 5985
+  endpoint = "http://#{winrm_host}:#{port}/wsman"
+  log(:info, "endpoint => #{endpoint}")
 
-  ps_script = <<PS_SCRIPT
-$result = @{}
+  transport = 'ssl' # ssl/kerberos/plaintext
+  opts = {
+    :user         => winrm_user,
+    :pass         => winrm_password,
+    :disable_sspi => true
+  }
+  if transport == 'kerberos'
+    opts.merge!(
+      :realm            => winrm_realm,
+      :basic_auth_only  => false,
+      :disable_sspi     => false
+    )
+  end
+  log(:info, "opts => #{opts}") if @debug
 
+script = <<SCRIPT
 $vi_task_id = '#{vi_task_id}'
 if ( !$vi_task_id ) { $result['Action'] = 'no_var' }
-
 else {
-
-  Add-PSSnapin VMware.VimAutomation.Core
-
-  Connect-VIServer -Server #{vm.ext_management_system.ipaddress} -User '#{vm.ext_management_system.authentication_userid}' -Password '#{vm.ext_management_system.authentication_password}'
+  Add-PSSnapin VMware.VimAutomation.Core | Out-Null
+  Connect-VIServer -Server #{vm.ext_management_system.ipaddress} -User '#{vm.ext_management_system.authentication_userid}' -Password '#{vm.ext_management_system.authentication_password}' | Out-Null
 
   $task = Get-Task | where { $_.Id -eq $vi_task_id }
-
-  if ( !$task ) { $result['Action'] = 'no_task' }
+  if ( !$task ) { 'action=no_task' }
   else {
-      $result['State'] = $task.State.ToString()
-      $result['PercentComplete'] = $task.PercentComplete
+      'state=' + $task.State.ToString()
+      'percent_complete=' + $task.percent_complete
 
       switch ($task.State) {
-          Error       { $result['Action'] = 'failed'}
-          Queued      { $result['Action'] = 'retry'}
-          Running     { $result['Action'] = 'retry'}
-          Success     { $result['Action'] = 'complete'}
-          default     { $result['Action'] = 'unknown_state'}
+          Error       { 'action=failed' }
+          Queued      { 'action=retry' }
+          Running     { 'action=retry' }
+          Success     { 'action=complete' }
+          default     { 'action=unknown_state' }
       }
-
   }
-
-  Disconnect-VIServer -Confirm:$false
+  Disconnect-VIServer -Confirm:$false | Out-Null
 }
+SCRIPT
 
-$result
-PS_SCRIPT
+  # log(:info, "script => #{script}") if @debug
 
-  #log(:info, "PowerShell: #{ps_script}")
-  result_format = "object"
-  result = proxy.powershell(ps_script, result_format)
-  log(:info, "Powershell result: <#{result.inspect}>")
+  log(:info, 'Establishing WinRM connection')
+  connect_winrm = WinRM::WinRMWebService.new(endpoint, transport.to_sym, opts)
 
-  result = result.first
-  log(:info, "Action          : <#{result[:Action]}>")
-  log(:info, "State           : <#{result[:State]}>")
-  log(:info, "PercentComplete : <#{result[:PercentComplete]}>")
+  log(:info, 'Executing PowerShell (checking storage vMotion task state)')
+  powershell_return = connect_winrm.powershell(script)
 
-  case result[:Action]
+  # Process the winrm output
+  log(:info, "powershell_return => #{powershell_return}") if @debug
 
-    when 'retry'
+  result = {}
+  powershell_return[:data].each { |array_item|
+    log(:info, "#{array_item}") if @debug
+
+    array_item.each { |k, v|
+      case k
+      
+      # Check for errors
+      when :stderr
+        status = /(.*)Error(.*)/.match(v.strip)
+        raise status[0] if status
+
+      # Extract the variables
+      when :stdout
+        action            = /^action=(.*)/.match(v.strip)
+        state             = /^state=(.*)/.match(v.strip)
+        percent_complete  = /^percent_complete=(.*)/.match(v.strip)
+
+        result.merge!(action: action) unless action.nil?
+        result.merge!(state: state) unless state.nil?
+        result.merge!(percent_complete: percent_complete) unless percent_complete.nil?
+      end
+    }
+  }
+  log(:info, "result: #{result}") if @debug
+
+  case result[:action]
+
+  when 'retry'
     log(:info, 'Storage vMotion still processing')
-    status_detail = "The #{@process} process '#{vi_task_id}' is in progress and #{result[:PercentComplete]}% complete, you will be notified once completed"
+    status_detail = "The #{@process} process '#{vi_task_id}' is in progress and #{result[:percent_complete]}% complete, you will be notified once completed"
     send_email(vm, 'In Progress', status_detail)
 
     $evm.root['ae_result']         = 'retry'
@@ -323,27 +356,27 @@ PS_SCRIPT
     $evm.root['vi_task_id'] = vi_task_id
     $evm.root['destination_datastore'] = destination_datastore
 
-    when 'complete'
+  when 'complete'
     log(:info, 'Storage vMotion completed')
     send_email(vm, 'Completed', "The #{@process} process has completed successfully. The new datastore is '#{destination_datastore}'")
     tag_vm(vm, destination_datastore, @process)
 
-    when 'no_task'
+  when 'no_task'
     log(:info, 'Storage vMotion failed')
     send_email(vm, 'Failed', "The #{@process} process has failed, task <#{vi_task_id}> was not found in vCenter, check the CloudForms automate.log for details")
     exit MIQ_ERROR
 
-    when 'no_var'
+  when 'no_var'
     log(:info, 'Storage vMotion failed')
     send_email(vm, 'Failed', "The #{@process} process failed, task Id <#{vi_task_id}> was not passed to PowerShell, check the CloudForms automate.log for details")
     exit MIQ_ERROR
 
-    when 'unknown_state'
+  when 'unknown_state'
     log(:info, 'Storage vMotion failed')
     send_email(vm, 'Failed', "The #{@process} process failed, task <#{vi_task_id}> is in an unexpected state, check VMware vCenter <#{vm.ext_management_system.name}> for details")
     exit MIQ_ERROR
 
-    else
+  else
     log(:info, 'Storage vMotion failed')
     send_email(vm, 'Failed', "The #{@process} process failed, no result 'action' passed from PowerShell, check the CloudForms automate.log for details")
     exit MIQ_ERROR

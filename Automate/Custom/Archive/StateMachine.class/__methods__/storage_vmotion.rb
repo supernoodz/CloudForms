@@ -92,7 +92,7 @@ begin
       subject = "VM Archive Request | #{status}"
     end
 
-  # Build email body
+    # Build email body
     body = "Hello #{owner_name},"
     case @process
     when 'retrieve'
@@ -369,51 +369,79 @@ begin
       raise 'One or more required vm.ext_management_system attributes missing'
     end
 
-    # Locate Windows proxy
-    proxies = $evm.execute('active_miq_proxies')
-    proxy = proxies.detect { |p| p.host.platform == 'windows'}
-    raise 'Fatal error, could not find an active Windows SmartProxy' if proxy.nil?
-    log(:info, "Windows SmartProxy: #{proxy.name}")
-    # log(:info, "Proxy.inspect #{proxy.inspect}")
+    # WinRM host
+    winrm_host      = ''
+    winrm_user      = ''
+    winrm_password  = ''
+
+    port ||= 5985
+    endpoint = "http://#{winrm_host}:#{port}/wsman"
+    log(:info, "endpoint => #{endpoint}")
+
+    transport = 'ssl' # ssl/kerberos/plaintext
+    opts = {
+      :user         => winrm_user,
+      :pass         => winrm_password,
+      :disable_sspi => true
+    }
+    if transport == 'kerberos'
+      opts.merge!(
+        :realm            => winrm_realm,
+        :basic_auth_only  => false,
+        :disable_sspi     => false
+      )
+    end
+    log(:info, "opts => #{opts}") if @debug
 
     # Kick-off storage vMotion
 
-    log(:info, "Invoking storage vMotion")
-
-    ps_script = <<PS_SCRIPT
-$result = @{}
-
-Add-PSSnapin VMware.VimAutomation.Core
-
-Connect-VIServer -Server #{vm.ext_management_system.ipaddress} -User '#{vm.ext_management_system.authentication_userid}' -Password '#{vm.ext_management_system.authentication_password}'
-
+script = <<SCRIPT
+Add-PSSnapin VMware.VimAutomation.Core | Out-Null
+Connect-VIServer -Server #{vm.ext_management_system.ipaddress} -User '#{vm.ext_management_system.authentication_userid}' -Password '#{vm.ext_management_system.authentication_password}' | Out-Null
 $moveTask = Move-VM '#{vm.name}' -Datastore '#{destination_datastore.name}' -RunAsync
+'vi_task_id=' + $moveTask.Id
+Disconnect-VIServer -Confirm:$false | Out-Null
+SCRIPT
 
-$result['vi_task_id'] = $moveTask.Id
+    # log(:info, "script => #{script}") if @debug
 
-Disconnect-VIServer -Confirm:$false
+    log(:info, 'Establishing WinRM connection')
+    connect_winrm = WinRM::WinRMWebService.new(endpoint, transport.to_sym, opts)
 
-$result
-PS_SCRIPT
+    log(:info, 'Executing PowerShell (invoking storage vMotion)')
+    powershell_return = connect_winrm.powershell(script)
 
-    #log(:info, "PowerShell: #{ps_script}") if @debug
-    result_format = "object"
-    result = proxy.powershell(ps_script, result_format)
-    log(:info, "Powershell result: <#{result.inspect}>")
+    # Process the winrm output
+    log(:info, "powershell_return => #{powershell_return}") if @debug
+    powershell_return[:data].each { |array_item|
+      log(:info, "#{array_item}") if @debug
 
-    result = result.first
-    vi_task_id = result[:vi_task_id]
+      array_item.each { |k, v|
+        case k
+        
+        # Check for errors
+        when :stderr
+          status = /(.*)Error(.*)/.match(v.strip)
+          raise status[0] if status
 
-    log(:info, "Task ID: <#{vi_task_id}>")
+        # Extract the SCVMM job GUID and set_state_var
+        when :stdout
+          vi_task_id = /^vi_task_id=(.*)/.match(v.strip)
+          if vi_task_id
+            # Update VM Custom Keys with task Id and destination datastore
+            vm.custom_set(:vi_task_id, vi_task_id)
+            vm.custom_set(:destination_datastore, destination_datastore.name)
+            log(:info, "vm.custom_get(:vi_task_id): <#{vm.custom_get(:vi_task_id).inspect}>")
+            log(:info, "vm.custom_get(:destination_datastore): <#{vm.custom_get(:destination_datastore).inspect}>")
 
-    # Update VM Custom Keys with task Id and destination datastore - not ideal but can't use root object as it's not persistent after first retry.
-    vm.custom_set(:vi_task_id, vi_task_id)
-    vm.custom_set(:destination_datastore, destination_datastore.name)
-    log(:info, "vm.custom_get(:vi_task_id): <#{vm.custom_get(:vi_task_id).inspect}>")
-    log(:info, "vm.custom_get(:destination_datastore): <#{vm.custom_get(:destination_datastore).inspect}>")
+            status_detail = "The #{@process} process '#{vi_task_id}' has started and may take some time, you will be notified once completed"
+            send_email(vm, 'Started', status_detail)
+            break
+          end
 
-    status_detail = "The #{@process} process '#{vi_task_id}' has started and may take some time, you will be notified once completed"
-    send_email(vm, 'Started', status_detail)
+        end
+      }
+    }
 
   end
 
