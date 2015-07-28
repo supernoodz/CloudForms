@@ -27,6 +27,8 @@
 
 begin
 
+  require 'winrm'
+
   # Method for logging
   def log(level, message)
     @method = '---------------- check_task ----------------'
@@ -289,7 +291,7 @@ else {
   if ( !$task ) { 'action=no_task' }
   else {
       'state=' + $task.State.ToString()
-      'percent_complete=' + $task.percent_complete
+      'percent_complete=' + $task.PercentComplete
 
       switch ($task.State) {
           Error       { 'action=failed' }
@@ -319,6 +321,8 @@ SCRIPT
     log(:info, "#{array_item}") if @debug
 
     array_item.each { |k, v|
+      log(:info, "k: #{k.inspect}") if @debug
+      log(:info, "v: #{v.inspect}") if @debug
       case k
       
       # Check for errors
@@ -332,9 +336,9 @@ SCRIPT
         state             = /^state=(.*)/.match(v.strip)
         percent_complete  = /^percent_complete=(.*)/.match(v.strip)
 
-        result.merge!(action: action) unless action.nil?
-        result.merge!(state: state) unless state.nil?
-        result.merge!(percent_complete: percent_complete) unless percent_complete.nil?
+        result.merge!(action: action[1]) unless action.nil?
+        result.merge!(state: state[1]) unless state.nil?
+        result.merge!(percent_complete: percent_complete[1]) unless percent_complete.nil?
       end
     }
   }

@@ -32,6 +32,8 @@
 
 begin
 
+  require 'winrm'
+
   # Method for logging
   def log(level, message)
     @method = '---------------- storage_vMotion ----------------'
@@ -417,6 +419,8 @@ SCRIPT
       log(:info, "#{array_item}") if @debug
 
       array_item.each { |k, v|
+        log(:info, "k: #{k.inspect}") if @debug
+        log(:info, "v: #{v.inspect}") if @debug
         case k
         
         # Check for errors
@@ -429,7 +433,7 @@ SCRIPT
           vi_task_id = /^vi_task_id=(.*)/.match(v.strip)
           if vi_task_id
             # Update VM Custom Keys with task Id and destination datastore
-            vm.custom_set(:vi_task_id, vi_task_id)
+            vm.custom_set(:vi_task_id, vi_task_id[1])
             vm.custom_set(:destination_datastore, destination_datastore.name)
             log(:info, "vm.custom_get(:vi_task_id): <#{vm.custom_get(:vi_task_id).inspect}>")
             log(:info, "vm.custom_get(:destination_datastore): <#{vm.custom_get(:destination_datastore).inspect}>")
