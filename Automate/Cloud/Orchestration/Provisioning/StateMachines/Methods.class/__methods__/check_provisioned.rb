@@ -54,7 +54,6 @@ def check_deployed(service)
     )
 
     stack_name      = service.stack_name
-    # stack_name      = service.options[:stack_name]
     resource_group  = service.options[:create_options][:resource_group]
     raw_stack       = Azure::Armrest::TemplateDeploymentService.new(conf).get(stack_name, resource_group)
     correlation_id  = raw_stack.properties.correlation_id
@@ -66,33 +65,70 @@ def check_deployed(service)
     select          = 'correlationId, Properties'
     events          = event_service.list(filter, select)
 
-    events.each { |event|
+    @request_message = nil
+    events.each do |event|
       code = nil; message = nil
+
       if event.respond_to?(:properties)
-        if event.properties.respond_to?(:status_message)
-          $evm.log(:error, event.properties.status_message)
-          if event.properties.status_message =~ /error/i
-            status_message  = JSON.parse(event.properties.status_message)
-            unless status_message['error'].nil?
-              if status_message['error']['details'].blank?
-                code    = status_message['error']['code']
-                message = status_message['error']['message'].gsub(/[^a-zA-Z0-9\-\s],/, '')
-              elsif status_message['error']['details'].empty?
-                code    = status_message['error']['code']
-                message = status_message['error']['message'].gsub(/[^a-zA-Z0-9\-\s],/, '')
-              else
-                code    = status_message['error']['details'][0]['code']
-                message = status_message['error']['details'][0]['message'].gsub(/[^a-zA-Z0-9\-\s],/, '')
-              end
-              $evm.log(:error, "#{code}: #{message}")  
-              status_message  = "#{code}: #{message}".truncate(255)
-              $evm.set_state_var('status_message', status_message)
+        if event.properties.respond_to?(:status_code)
+          $evm.log(:info, "status_code => #{event.properties.status_code}")
+
+          if event.properties.respond_to?(:status_message)
+            $evm.log(:info, "status_message => #{event.properties.status_message}")
+
+            case event.properties.status_code.downcase
+
+            when 'conflict'
+
+              status_message  = JSON.parse(event.properties.status_message)
+              $evm.log(:error, "status_message => #{status_message}")
+
+              code    = status_message['Code']
+              message = status_message['Message'].gsub(/[^a-zA-Z0-9\-\s],/, '')
+
+              @request_message  = "#{code}: #{message}"
               break
+            
+            when 'badrequest'
+              
+              status_message  = JSON.parse(event.properties.status_message)
+              $evm.log(:error, "status_message => #{status_message}")
+
+              unless status_message['error'].nil?
+                if status_message['error']['details'].blank?
+                  code    = status_message['error']['code']
+                  message = status_message['error']['message']
+
+                elsif status_message['error']['details'].empty?
+                  code    = status_message['error']['code']
+                  message = status_message['error']['message']
+
+                else
+                  code    = status_message['error']['details'][0]['code']
+                  message = status_message['error']['details'][0]['message']
+                end
+                message = message.gsub(/[^a-zA-Z0-9\-\s],/, '')
+
+                @request_message  = "#{code}: #{message}"
+                break
+              end
+
+            else
+              $evm.log(:info, "Ignoring status_code #{event.properties.status_code}")
             end
+
+          else
+            $evm.log(:info, "Ignoring empty status_message")
           end
+
         end
       end
-    }
+      @request_message  = "Error: Stack error detected but detail not found"
+    end
+
+    @request_message = @request_message.truncate(255) if @request_message.respond_to?(:truncate)
+    $evm.log(:error, @request_message)
+    $evm.set_state_var('request_message', @request_message)
 
   end
 
@@ -132,9 +168,9 @@ else
   check_deployed(service)
 end
 
-if $evm.state_var_exist?('status_message')
-  status_message = $evm.get_state_var('status_message')
-  task.miq_request.user_message = status_message
+if $evm.state_var_exist?('request_message')
+  request_message = $evm.get_state_var('request_message')
+  task.miq_request.user_message = request_message
 else
   task.miq_request.user_message = $evm.root['ae_reason'].truncate(255) unless $evm.root['ae_reason'].blank?
 end

@@ -15,9 +15,9 @@ if $evm.root['ae_result'] == 'ok' || $evm.root['ae_result'] == 'error'
   # Azure stack error
   #########################################################
   
-  if $evm.state_var_exist?('status_message')
-    status_message = $evm.get_state_var('status_message')
-    prov.message = status_message
+  if $evm.state_var_exist?('request_message')
+    request_message = $evm.get_state_var('request_message')
+    prov.message = request_message
   else
     prov.message = status
   end
