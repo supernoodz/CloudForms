@@ -1,0 +1,176 @@
+---
+- description: 
+  buttons: submit,cancel
+  label: 'Scale Application (Final)'
+  dialog_tabs:
+  - description: 
+    display: edit
+    label: tab
+    display_method: 
+    display_method_options: 
+    position: 0
+    dialog_groups:
+    - description: 
+      display: edit
+      label: Request
+      display_method: 
+      display_method_options: 
+      position: 0
+      dialog_fields:
+      - name: project
+        description: project
+        type: DialogFieldDropDownList
+        data_type: string
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values:
+        - - pt-calendar-sync
+          - pt-calendar-sync
+        - - qa
+          - qa
+        - - apd-fis
+          - apd-fis
+        - - chris
+          - chris
+        - - management-infra
+          - management-infra
+        - - mus
+          - mus
+        - - openshift-infra
+          - openshift-infra
+        - - boosh
+          - boosh
+        - - logging
+          - logging
+        - - default
+          - default
+        - - development
+          - development
+        - - fuse
+          - fuse
+        - - innovation-2016
+          - innovation-2016
+        - - testing
+          - testing
+        - - apd-demo
+          - apd-demo
+        - - apd-spark
+          - apd-spark
+        - - jbossdemo
+          - jbossdemo
+        - - openshift
+          - openshift
+        - - apd-test
+          - apd-test
+        - - ci
+          - ci
+        - - 
+          - "<Choose>"
+        values_method: 
+        values_method_options: {}
+        options:
+          :sort_by: :description
+          :sort_order: :ascending
+        label: project
+        position: 0
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+        dynamic: true
+        show_refresh_button: 
+        load_values_on_init: 
+        read_only: false
+        auto_refresh: 
+        trigger_auto_refresh: true
+        resource_action:
+          action: 
+          resource_type: DialogField
+          ae_namespace: Integration/OpenShift
+          ae_class: Methods
+          ae_instance: query_projects
+          ae_message: 
+          ae_attributes: {}
+      - name: deployment_config
+        description: deployment_config
+        type: DialogFieldDropDownList
+        data_type: string
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: 
+        values:
+        - - 
+          - "<None>"
+        values_method: 
+        values_method_options: {}
+        options:
+          :sort_by: :description
+          :sort_order: :ascending
+        label: deployment_config
+        position: 1
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+        dynamic: true
+        show_refresh_button: false
+        load_values_on_init: 
+        read_only: false
+        auto_refresh: true
+        trigger_auto_refresh: false
+        resource_action:
+          action: 
+          resource_type: DialogField
+          ae_namespace: Integration/OpenShift
+          ae_class: Methods
+          ae_instance: query_configs
+          ae_message: 
+          ae_attributes: {}
+      - name: replicas
+        description: replicas
+        type: DialogFieldTextBox
+        data_type: 
+        notes: 
+        notes_display: 
+        display: edit
+        display_method: 
+        display_method_options: {}
+        required: true
+        required_method: 
+        required_method_options: {}
+        default_value: '1'
+        values: 
+        values_method: 
+        values_method_options: {}
+        options:
+          :protected: false
+        label: replicas
+        position: 2
+        validator_type: 
+        validator_rule: 
+        reconfigurable: 
+        dynamic: false
+        show_refresh_button: 
+        load_values_on_init: 
+        read_only: false
+        auto_refresh: 
+        trigger_auto_refresh: 
+        resource_action:
+          action: 
+          resource_type: DialogField
+          ae_namespace: 
+          ae_class: 
+          ae_instance: 
+          ae_message: 
+          ae_attributes: {}
