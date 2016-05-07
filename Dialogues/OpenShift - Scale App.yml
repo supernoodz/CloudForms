@@ -1,7 +1,7 @@
 ---
 - description: 
   buttons: submit,cancel
-  label: 'Scale Application (Final)'
+  label: 'Scale Application'
   dialog_tabs:
   - description: 
     display: edit
@@ -31,46 +31,6 @@
         required_method_options: {}
         default_value: 
         values:
-        - - pt-calendar-sync
-          - pt-calendar-sync
-        - - qa
-          - qa
-        - - apd-fis
-          - apd-fis
-        - - chris
-          - chris
-        - - management-infra
-          - management-infra
-        - - mus
-          - mus
-        - - openshift-infra
-          - openshift-infra
-        - - boosh
-          - boosh
-        - - logging
-          - logging
-        - - default
-          - default
-        - - development
-          - development
-        - - fuse
-          - fuse
-        - - innovation-2016
-          - innovation-2016
-        - - testing
-          - testing
-        - - apd-demo
-          - apd-demo
-        - - apd-spark
-          - apd-spark
-        - - jbossdemo
-          - jbossdemo
-        - - openshift
-          - openshift
-        - - apd-test
-          - apd-test
-        - - ci
-          - ci
         - - 
           - "<Choose>"
         values_method: 
