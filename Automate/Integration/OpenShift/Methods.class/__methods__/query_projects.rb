@@ -1,24 +1,24 @@
 require 'rest-client'
 
-ose_host          = $evm.object['ose_host']
-ose_port          = $evm.object['ose_port']
-token             = $evm.object.decrypt('ose_pwd')
+ose_host = $evm.object['ose_host']
+ose_port = $evm.object['ose_port']
+token    = $evm.object.decrypt('ose_pwd')
 
-url = "https://#{ose_host}:#{ose_port}"
-
+url   = "https://#{ose_host}:#{ose_port}"
 query = '/oapi/v1/projects'
-$evm.log(:info, query)
+$evm.log(:info, "#{url}#{query}")
+
 rest_return = RestClient::Request.execute(
   method: :get,
   url: url + query,
   :headers => {
-    :accept => :json,
+    :accept        => 'application/json',
+    :content_type  => 'application/json',
     :authorization => "Bearer #{token}"
   },
-  verify_ssl: false)
+  verify_ssl: false
+)
 result = JSON.parse(rest_return)
-
-# result['items'].each {|i| p i['metadata']['name'] }
 
 project_list = {}
 result['items'].each { |i| project_list[i['metadata']['name']] = i['metadata']['name'] }

@@ -1,23 +1,23 @@
 require 'rest-client'
 
-ose_host          = $evm.object['ose_host']
-ose_port          = $evm.object['ose_port']
-token             = $evm.object.decrypt('ose_pwd')
-project           = $evm.root['dialog_project']
+ose_host = $evm.object['ose_host']
+ose_port = $evm.object['ose_port']
+token    = $evm.object.decrypt('ose_pwd')
+project  = $evm.root['dialog_project']
 
 config_list = {}
 
-url = "https://#{ose_host}:#{ose_port}"
-
+url   = "https://#{ose_host}:#{ose_port}"
 query = "/oapi/v1/namespaces/#{project}/deploymentconfigs"
-$evm.log(:info, query)
+$evm.log(:info, "#{url}#{query}")
 
 unless project.nil?
   rest_return = RestClient::Request.execute(
     method: :get,
     url: url + query,
     :headers => {
-      :accept => :json,
+      :accept        => 'application/json',
+      :content_type  => 'application/json',
       :authorization => "Bearer #{token}"
     },
     verify_ssl: false)
