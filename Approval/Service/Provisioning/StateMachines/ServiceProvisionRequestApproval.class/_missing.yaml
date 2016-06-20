@@ -1,0 +1,15 @@
+---
+object_type: instance
+version: 1.0
+object:
+  attributes:
+    display_name: 
+    name: ".missing"
+    inherits: 
+    description: 
+  fields:
+  - approval_type:
+      value: require_approval
+  - ValidateRequest:
+      value: "#"
+      on_entry: validate_request
