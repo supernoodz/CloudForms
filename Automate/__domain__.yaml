@@ -3,7 +3,7 @@ object_type: domain
 version: 1.0
 object:
   attributes:
-    name: Bluecrest
+    name: supermodz
     description: 
     display_name: 
     system: false
