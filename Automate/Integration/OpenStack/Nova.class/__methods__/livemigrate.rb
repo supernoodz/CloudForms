@@ -63,7 +63,7 @@ conn = Fog::Compute.new({
 
 body = {
   'os-migrateLive' => {
-#    'host' => 'tsp012.osp.belbone.be',
+#    '',
     'block_migration' => false,
     'disk_over_commit' => false,
   }

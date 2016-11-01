@@ -63,7 +63,7 @@ conn = Fog::Compute.new({
 
 body = {
   'evacuate' => {
-#    :host => 'tsp012.osp.belbone.be',
+#    :host => '',
 	:admin_password => openstack.authentication_password,
 	:onSharedStorage => true
   }
