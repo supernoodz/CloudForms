@@ -12,8 +12,9 @@ def refresh_provider(service)
 end
 
 def refresh_may_have_completed?(service)
-  provider = service.orchestration_manager
-  provider.last_refresh_date.to_i > $evm.get_state_var('provider_last_refresh')
+  stack = service.orchestration_stack
+  refreshed_stack = $evm.vmdb(:orchestration_stack).find_by(:name => stack.name, :ems_ref => stack.ems_ref)
+  refreshed_stack && refreshed_stack.status != 'CREATE_IN_PROGRESS'
 end
 
 def check_deployed(service)
@@ -35,8 +36,8 @@ def check_deployed(service)
 
   $evm.log("info", "Stack deployment finished. Status: #{$evm.root['ae_result']}, reason: #{$evm.root['ae_reason']}")
   $evm.log("info", "Please examine stack resources for more details") if $evm.root['ae_result'] == 'error'
-
-  #########################################################
+  
+   #########################################################
   # Azure stack error
   #########################################################
 
@@ -44,13 +45,12 @@ def check_deployed(service)
 
     $evm.log(:info, "Azure stack failure detected")
     require 'azure-armrest'
-    require 'pp'
-    require 'rest-client'
 
     conf = Azure::Armrest::ArmrestService.configure(
-      :client_id  => service.orchestration_manager.authentication_userid,
-      :client_key => service.orchestration_manager.authentication_password,
-      :tenant_id  => service.orchestration_manager.uid_ems
+      :client_id        => service.orchestration_manager.authentication_userid,
+      :client_key       => service.orchestration_manager.authentication_password,
+      :tenant_id        => service.orchestration_manager.uid_ems,
+      :subscription_id  => service.orchestration_manager.subscription
     )
 
     stack_name      = service.stack_name
@@ -63,7 +63,7 @@ def check_deployed(service)
     date            = (Time.now - 86400).httpdate
     filter          = "eventTimestamp ge #{date} and correlationId eq #{correlation_id}"
     select          = 'correlationId, Properties'
-    events          = event_service.list(filter, select)
+    events          = event_service.list(:filter => filter, :select => select, :all => true)
 
     @request_message = nil
     events.each do |event|
@@ -159,7 +159,6 @@ def check_refreshed(service)
   end
 end
 
-@status_message = nil
 task = $evm.root["service_template_provision_task"]
 service = task.destination
 if $evm.state_var_exist?('provider_last_refresh')
@@ -167,10 +166,4 @@ if $evm.state_var_exist?('provider_last_refresh')
 else
   check_deployed(service)
 end
-
-if $evm.state_var_exist?('request_message')
-  request_message = $evm.get_state_var('request_message')
-  task.miq_request.user_message = request_message
-else
-  task.miq_request.user_message = $evm.root['ae_reason'].truncate(255) unless $evm.root['ae_reason'].blank?
-end
+task.miq_request.user_message = $evm.root['ae_reason'].truncate(255) unless $evm.root['ae_reason'].blank?
