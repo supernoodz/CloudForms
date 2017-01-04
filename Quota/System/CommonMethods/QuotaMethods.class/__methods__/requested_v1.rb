@@ -89,11 +89,11 @@ def vm_prov_option_value(prov_option, options_array = [])
                :number_of_vms => get_option_value(@miq_request, :number_of_vms),
                :cloud         => vm_provision_cloud?}
   # number_of_vms doesn't exist for VmReconfigureRequest
-  args_hash[:number_of_vms] = 1 if @reconfigure_request
+  args_hash[:number_of_vms] = 1 if args_hash[:resource].type == "VmReconfigureRequest"
 
   case prov_option
   when :vm_memory
-    if @reconfigure_request
+    if args_hash[:resource].type == "VmReconfigureRequest"
       requested_memory(args_hash, @vm.vendor)
     else
       requested_memory(args_hash, @miq_request.source.vendor)
@@ -113,7 +113,7 @@ def requested_memory(args_hash, vendor)
   memory = memory.megabytes if %w(amazon openstack google).exclude?(vendor)
   args_hash[:prov_value] = args_hash[:number_of_vms] * memory
 
-  if @reconfigure_request && args_hash[:resource].options[:vm_memory]
+  if args_hash[:resource].resource.type == "VmReconfigureRequest" && args_hash[:resource].options[:vm_memory]
     # Account for the VM's existing memory IF additional memory has been requested
     args_hash[:prov_value] = args_hash[:prov_value].to_i - @vm.hardware.memory_mb.to_i * 1024 * 1024
   end
@@ -126,7 +126,7 @@ def requested_number_of_cpus(args_hash)
   cpu_in_request = get_option_value(args_hash[:resource], args_hash[:number_of_cpus]) if cpu_in_request.zero?
   args_hash[:prov_value] = args_hash[:number_of_vms] * cpu_in_request
 
-  if @reconfigure_request && args_hash[:resource].options[:number_of_sockets]
+  if @miq_request.resource.type == "VmReconfigureRequest" && args_hash[:resource].options[:number_of_sockets]
     # Account for the VM's existing CPUs IF additional CPUs have been requested
     args_hash[:prov_value] = args_hash[:prov_value].to_i - @vm.hardware.cpu_total_cores.to_i * @vm.hardware.cpu_cores_per_socket.to_i
   end
@@ -138,21 +138,21 @@ def vmdb_object(model, id)
 end
 
 def requested_storage(args_hash)
-  if @reconfigure_request
+  if @miq_request.resource.type == "VmReconfigureRequest"
     if args_hash[:resource].options[:disk_add].nil?
       vm_size = 0
     else
       vm_size = 0
       args_hash[:resource].options[:disk_add].each do |disk|
-        vm_size += disk[:disk_size_in_mb].megabytes.to_i if disk[:disk_size_in_mb]
-        vm_size += disk[:disk_size_in_gb].kilobytes.to_i if disk[:disk_size_in_gb]
+        vm_size += disk[:disk_size_in_mb].to_i * 1024 * 1024 if disk[:disk_size_in_mb]
+        vm_size += disk[:disk_size_in_gb].to_i * 1024 if disk[:disk_size_in_gb]
       end
     end
   else
     vm_size = args_hash[:resource].vm_template.provisioned_storage
   end
   args_hash[:prov_value] = args_hash[:number_of_vms] * vm_size
-  if @reconfigure_request && args_hash[:resource].options[:disk_add]
+  if @miq_request.resource.type == "VmReconfigureRequest" && args_hash[:resource].options[:disk_add]
     # Account for the VM's existing storage IF additional disks have been requested
     args_hash[:prov_value] = args_hash[:prov_value].to_i - @vm.provisioned_storage / (1024 * 1024)
   end
@@ -287,6 +287,10 @@ def error(type)
   raise msg
 end
 
+$evm.log(:info, "\n \n \n \n \n \n \n \n \n \n MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n MMMMMoo++MMMMMMoo++++++++++++++++++++++++++++++++++++ooMMMMNN``--MMMMM\n MMMNN++yyMMMMmm++++++++++++++++++++++++++++++++++++++++mmMMMM::  mmMMM\n MMMhh++ddMMMMyy++++++++++++++++++++++++++++++++++++++++yyMMMMyy  ooMMM\n MMMhh++MMMMMMoo++++++++++++++++++++++++++++++++++++++++ooMMMMNN  ooMMM\n MMMMMmmMMMMmm++++++++++++++++++++++++++++++++++++++++++++mmMMMMddMMMMM\n MMMMMMMMMMMyy++++++++++++++++++++++++++++++++++++++++++++hhMMMMMMMMMMM\n MMMMMMMMMMMhh++++++++++++++++++++++++++++++++++++++++++++hhMMMMMMMMMMM\n MMMMMMMMMMMMMmmoo++++++++++++++++++++++++++++++++++++oommMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMNNss++++++++++++++++++++++++++++++++ssNNMMMMMMMMMMMMMMM\n MMMMMMMMMooNNMMMMMMhh++++++++++++++++++++++++++++hhMMMMMMNNooMMMMMMMMM\n MMMMMMMdd  ..ddMMMMMMss++++++++++++++++++++++++ssMMMMMMdd..  mmMMMMMMM\n MMMMMMMoo      yyMMMMhh++++++++++++++++++++++++hhMMMMyy      ooMMMMMMM\n MMMMMMM..      --MMMMNN++++++++++++++++++++++++NNMMMM--      ..MMMMMMM\n MMMMMmm          mmMMMMoo++++++++++++++++++++ooMMMMmm          mmMMMMM\n MMMMMoo          ssMMMMhh++++++++++++++++++++hhMMMMss          ooMMMMM\n MMMMM--      ..  --MMMMNN++++++++++++++++++++NNMMMM--  ..      --MMMMM\n MMMmm      ..yy    mmMMMMoo++++++++++++++++ooMMMMmm    yy..      mmMMM\n MMMoo      ++NN    ssMMMMhh++++++++++++++++hhMMMMss    NN++      ssMMM\n MMMoo      ddMM::  --MMMMNNooooooooooooooooNNMMMM--  ::MMdd      ooMMM\n MMMMMyy````MMMMyy    NNMMMMMMMMMMMMMMMMMMMMMMMMNN    yyMMMM````yyMMMMM\n MMMMMMMmmssMMMMyy    ssMMMMMMMMMMMMMMMMMMMMMMMMss    yyMMMMssmmMMMMMMM\n MMMMMMMMMMMMMMM//    ..hhddddNNMMMMMMMMNNddddhh..    //MMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMM..          ooMMNN////NNMMoo          ..MMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMNN::    ..ddMMdd..    ..ddMMdd..    ::NNMMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMMMMMss//NNMMoo            ooMMNN//ssMMMMMMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMMMMMMMMMNN--                --NNMMMMMMMMMMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMMMMMMMMMNN++                ++NNMMMMMMMMMMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMMMMMMMMMMMMMyy``        ``yyMMMMMMMMMMMMMMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMMMMMMMMMMMMMMMmm--    --mmMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMooooMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n \n \n \n \n \n \n")
+
+$evm.root.attributes.sort.each { |k, v| $evm.log(:info, "Root:<$evm.root> Attribute - #{k}: #{v}")}
+
 request_info
 error("request") if @miq_request.nil?
 
@@ -299,12 +303,23 @@ if @service && @service_template.prov_type == 'generic'
   exit MIQ_OK
 end
 
-@reconfigure_request = @miq_request.type == "VmReconfigureRequest" ? true : false
-
-if @reconfigure_request
-  vm_id = @miq_request.options[:src_ids]
-  @vm = $evm.vmdb(:vm).find_by_id(vm_id)
+##############################################################################################################
+##############################################################################################################
+# For VmReconfigureRequest, the source VM doesn't appear to be available through any attribute or association
+##############################################################################################################
+##############################################################################################################
+if @miq_request.type == "VmReconfigureRequest"
+  if match = @miq_request.description.match(/:\s(.*)\s-/)
+    vm_name = match[1]
+    $evm.log(:info, "VmReconfigureRequest: #{vm_name}")
+    @vm = $evm.vmdb(:vm).find_by_name(vm_name)
+    raise "VmReconfigureRequest: Duplicate VMs named '#{vm_name}'" if @vm.respond_to?(:count)
+  else
+    raise 'VmReconfigureRequest: Unable to determine source VM'
+  end
 end
+##############################################################################################################
+##############################################################################################################
 
 $evm.root['quota_requested'] = calculate_requested(options_hash)
 $evm.log(:info, $evm.root['quota_requested'])
