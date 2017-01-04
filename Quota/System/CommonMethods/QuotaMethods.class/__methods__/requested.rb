@@ -5,7 +5,7 @@
 # Update to support VM Re-configuration
 
 def request_info
-  @service = ($evm.root['vmdb_object_type'] == 'service_template_provision_request') ? true : false
+  @service = ($evm.root['vmdb_object_type'] == 'service_template_provision_request')
   @miq_request = $evm.root['miq_request']
   $evm.log(:info, "Request: #{@miq_request.description} id: #{@miq_request.id} ")
 end
@@ -253,7 +253,7 @@ def service_options
 end
 
 def composite_service_options_value(child_service_resource, prov_option, options_array)
-  return if child_service_resource.resource.prov_type == 'generic'
+  return if child_service_resource.resource.prov_type.starts_with?('generic')
   child_service_resource.resource.service_resources.each do |grandchild_service_template_service_resource|
     service_prov_option_value(prov_option, grandchild_service_template_service_resource.resource, options_array)
   end
@@ -292,14 +292,14 @@ error("request") if @miq_request.nil?
 
 options_hash = service_options if @service
 
-if @service && @service_template.prov_type == 'generic'
+if @service && !@service_template.prov_type.nil? && @service_template.prov_type.starts_with?("generic")
   $evm.log(:info, "Generic Service Item.  No quota check being done.")
   $evm.root['ae_result'] = 'ok'
   $evm.root['ae_next_state'] = 'finished'
   exit MIQ_OK
 end
 
-@reconfigure_request = @miq_request.type == "VmReconfigureRequest" ? true : false
+@reconfigure_request = @miq_request.type == "VmReconfigureRequest"
 
 if @reconfigure_request
   vm_id = @miq_request.options[:src_ids]
