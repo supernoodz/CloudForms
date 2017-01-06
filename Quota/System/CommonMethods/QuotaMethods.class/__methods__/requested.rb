@@ -144,8 +144,8 @@ def requested_storage(args_hash)
     else
       vm_size = 0
       args_hash[:resource].options[:disk_add].each do |disk|
-        vm_size += disk[:disk_size_in_mb].megabytes.to_i if disk[:disk_size_in_mb]
-        vm_size += disk[:disk_size_in_gb].kilobytes.to_i if disk[:disk_size_in_gb]
+        vm_size += disk[:disk_size_in_mb].to_i.megabytes if disk[:disk_size_in_mb]
+        vm_size += disk[:disk_size_in_gb].to_i.kilobytes if disk[:disk_size_in_gb]
       end
     end
   else
