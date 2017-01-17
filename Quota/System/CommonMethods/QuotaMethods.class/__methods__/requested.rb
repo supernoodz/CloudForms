@@ -112,6 +112,8 @@ def requested_memory(args_hash, vendor)
   args_hash[:prov_value] = args_hash[:number_of_vms] * memory
 
   if @reconfigure_request && args_hash[:resource].options[:vm_memory]
+    @override_check == false if args_hash[:prov_value].to_i > @vm.hardware.memory_mb.to_i.megabytes
+
     # Account for the VM's existing memory IF additional memory has been requested
     args_hash[:prov_value] = args_hash[:prov_value].to_i - @vm.hardware.memory_mb.to_i.megabytes
   end
@@ -125,8 +127,12 @@ def requested_number_of_cpus(args_hash)
   args_hash[:prov_value] = args_hash[:number_of_vms] * cpu_in_request
 
   if @reconfigure_request && args_hash[:resource].options[:number_of_sockets]
+    @override_check == false if args_hash[:prov_value].to_i > @vm.hardware.cpu_total_cores.to_i \
+      * @vm.hardware.cpu_cores_per_socket.to_i
+
     # Account for the VM's existing CPUs IF additional CPUs have been requested
-    args_hash[:prov_value] = args_hash[:prov_value].to_i - @vm.hardware.cpu_total_cores.to_i * @vm.hardware.cpu_cores_per_socket.to_i
+    args_hash[:prov_value] = args_hash[:prov_value].to_i - @vm.hardware.cpu_total_cores.to_i \
+      * @vm.hardware.cpu_cores_per_socket.to_i
   end
   request_hash_value(args_hash)
 end
@@ -148,6 +154,8 @@ def requested_storage(args_hash)
   end
   args_hash[:prov_value] = args_hash[:number_of_vms] * vm_size
   if @reconfigure_request && args_hash[:resource].options[:disk_add]
+    @override_check == false if args_hash[:prov_value].to_i > @vm.provisioned_storage / (1024 * 1024)
+
     # Account for the VM's existing storage IF additional disks have been requested
     args_hash[:prov_value] = args_hash[:prov_value].to_i - @vm.provisioned_storage / (1024 * 1024)
   end
@@ -297,8 +305,11 @@ end
 @reconfigure_request = @miq_request.type == "VmReconfigureRequest"
 
 if @reconfigure_request
+  @override_check == true # default, unless additional quota is requested
   vm_id = @miq_request.options[:src_ids]
   @vm = $evm.vmdb(:vm).find_by_id(vm_id)
+  $evm.root['override_check'] = @override_check
+  10.times { $evm.log(:info, $evm.root['override_check']) }
 end
 
 $evm.root['quota_requested'] = calculate_requested(options_hash)
