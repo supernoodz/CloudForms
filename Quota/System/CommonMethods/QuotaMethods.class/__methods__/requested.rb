@@ -308,8 +308,9 @@ if @reconfigure_request
   @override_check == true # default, unless additional quota is requested
   vm_id = @miq_request.options[:src_ids]
   @vm = $evm.vmdb(:vm).find_by_id(vm_id)
-  $evm.root['override_check'] = @override_check
-  10.times { $evm.log(:info, $evm.root['override_check']) }
+  set_state_var(:override_check, @override_check)
+  # $evm.root['override_check'] = @override_check
+  10.times { $evm.log(:info, get_state_var(:override_check) }
 end
 
 $evm.root['quota_requested'] = calculate_requested(options_hash)

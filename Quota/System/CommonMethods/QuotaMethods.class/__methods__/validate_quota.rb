@@ -153,18 +153,17 @@ if !limits_set(@max_limit) && !limits_set(@warn_limit)
   $evm.log(:info, "No Quota limits set. No quota check being done.")
   $evm.root['ae_result'] = 'ok'
   exit MIQ_OK
-end 
-
-override_check = $evm.root['override_check']
-unless override_check.nil?
-  unless override_check = false
-    $evm.log(:info, "No Quota limits set. No quota check being done.")
-    $evm.root['ae_result'] = 'ok'
-    exit MIQ_OK
-  end
 end
 
-10.times { $evm.log(:info, $evm.root['override_check']) }
+if $evm.state_var_exist?(:override_check)
+    override_check = get_state_var(:override_check)
+    10.times { $evm.log(:info, "override_check: #{@override_check}") }
+    unless override_check = false
+      $evm.log(:info, "Overriding...")
+      $evm.root['ae_result'] = 'ok'
+      exit MIQ_OK
+    end
+end
 
 check_quotas
 
