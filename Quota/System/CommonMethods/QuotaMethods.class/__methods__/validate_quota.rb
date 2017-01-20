@@ -155,14 +155,12 @@ if !limits_set(@max_limit) && !limits_set(@warn_limit)
   exit MIQ_OK
 end
 
-if $evm.state_var_exist?(:override_check)
-    override_check = get_state_var(:override_check)
-    10.times { $evm.log(:info, "override_check: #{@override_check}") }
-    unless override_check = false
-      $evm.log(:info, "Overriding...")
-      $evm.root['ae_result'] = 'ok'
-      exit MIQ_OK
-    end
+unless $evm.root['bypass_quota'].nil?
+  if $evm.root['bypass_quota'] == true
+    $evm.log(:info, "VmReconfigureRequest: Bypassing quota check.")
+    $evm.root['ae_result'] = 'ok'
+    exit MIQ_OK
+  end
 end
 
 check_quotas
